@@ -50,6 +50,7 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponse create(Long userId, CreateAppointmentRequest request) {
+        // Idempotency protects the booking endpoint from repeated clicks or network retries.
         if (StringUtils.hasText(request.idempotencyKey())) {
             var record = idempotencyRecordRepository
                     .findByUserIdAndIdempotencyKey(userId, request.idempotencyKey());
@@ -61,10 +62,12 @@ public class AppointmentService {
         Patient patient = patientRepository.findByIdAndUserIdAndDeletedFalse(request.patientId(), userId)
                 .orElseThrow(() -> new BusinessException("就诊人不存在或不属于当前账号"));
 
+        // Lock the schedule row before checking and deducting quota to avoid overselling the last slot.
         DoctorSchedule schedule = scheduleRepository.findLockedById(request.scheduleId())
                 .orElseThrow(() -> new BusinessException("号源不存在"));
         validateScheduleCanBook(schedule);
 
+        // A patient can only keep one active appointment in the same department on the same day.
         boolean duplicate = appointmentRepository.existsByPatientIdAndDepartmentIdAndAppointmentDateAndStatusIn(
                 patient.getId(),
                 schedule.getDepartmentId(),
@@ -134,6 +137,7 @@ public class AppointmentService {
             throw new BusinessException("预约超过30分钟，已不可取消");
         }
 
+        // Cancellation and quota release must stay in the same transaction.
         DoctorSchedule schedule = scheduleRepository.findLockedById(appointment.getScheduleId())
                 .orElseThrow(() -> new BusinessException("关联号源不存在"));
         schedule.setRemainCount(Math.min(schedule.getTotalCount(), schedule.getRemainCount() + 1));
