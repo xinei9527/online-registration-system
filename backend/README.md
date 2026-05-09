@@ -44,9 +44,16 @@ DB_PORT=3306
 DB_NAME=hospital_registration
 DB_USERNAME=root
 DB_PASSWORD=你的MySQL密码
+JWT_SECRET=请替换为至少32位的JWT签名密钥
 ```
 
-3. 启动后端：
+3. 运行测试：
+
+```bash
+mvn test
+```
+
+4. 启动后端：
 
 ```bash
 mvn spring-boot:run

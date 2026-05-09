@@ -21,7 +21,7 @@ spring:
 
 app:
   jwt:
-    secret: "hospital-registration-demo-secret-key-2026"
+    secret: ${JWT_SECRET}
     expire-hours: 24
   cors:
     allowed-origin: "http://localhost:5173"
